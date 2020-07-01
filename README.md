@@ -6,3 +6,5 @@ The project uses a Constraint Satisfaction Problem Approach.
 
 - The problem only have solution for n >= 4.
 - Initially, the board is empty.
+
+You can access the application clicking [here](https://rsg73626.github.io/docs/nqueens/).
