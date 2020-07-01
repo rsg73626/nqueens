@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+
+<html>
+
+    <head>
+
+        <title> n Queens </title>
+        <meta charset="utf-8"/>
+        <meta lang="en"/>
+
+        <script src="./js/graph/graph.js"></script>
+        <script src="./js/csp/csp.js"></script>
+        <script src="./js/service/resources.js"></script>
+        <script src="./js/game/board.js"></script>
+
+        <style>
+
+            * {
+                margin: 0;
+                padding: 0;
+            }
+
+            html {
+                width: 100%;
+            }
+
+            body {
+                width: 100%;
+
+                font-family: 'Arial';
+            }
+
+            header {
+                width: 100%;
+                height: 100px;
+
+                background-color: black;
+                color: white;
+
+                display: flex;
+                flex-direction: column;
+                justify-content: space-around;
+                align-items: center;
+            }
+
+            head h1 {
+
+            }
+
+            header h3 {
+
+            }
+
+            main {
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+            }
+
+            main section {
+                width: calc(100% - 20px);
+                height: 75px;
+                margin: 30px 10px;
+
+                display: flex;
+                flex-direction: line;
+                justify-content: space-around;
+                align-items: center;
+
+                font-size: 20px; 
+            }
+
+            main section article .label { grid-area: label; }
+            main section article .minus { grid-area: minus; }
+            main section article .value { grid-area: value; }
+            main section article .plus  { grid-area: plus; }
+
+            main section article {
+                width: 50%;
+                height: 100%;
+
+                display: grid;
+                grid-template-areas: 'label label label' 
+                                     'minus value plus';
+                grid-template-rows: 50% 50%;
+                align-content: center;
+                justify-content: center;
+                align-items: center;
+            }
+
+            main section article label {
+                text-align: center;
+            }
+
+            main section article button {
+                width: 30px;
+                height: 30px; 
+                justify-self: center;
+
+                border-radius: 50%;
+                border: 1px solid black;
+                font-size: 20px;
+            }
+
+            main #loading {
+                height: 50px;
+
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+            }
+
+            main #board-table {
+                border: black solid 1px;
+
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+            }
+
+            main #board-table tr {
+                border: none;
+
+                display: flex;
+                flex-direction: line;
+                justify-content: center;
+                align-items: center;
+            }
+
+            main #board-table tr td {
+                width: var(--board-position-size);
+                height: var(--board-position-size);
+
+                border: none;
+                text-align: center;
+                font-size: calc(var(--board-position-size) - 6px);
+            }
+
+            main #board-table tr .queen {
+                cursor: pointer;
+            }
+
+            main #board-table tr .white {
+                background-color: white;
+                color: black;
+            }
+
+            main #board-table tr .black {
+                background-color: black;
+                color: white;
+            }
+
+            main #board-table tr .white-red {
+                background-color: rgba(255,0,0,0.5);
+            }
+
+            main #board-table tr .black-red {
+                background-color: rgba(255,0,0,0.7);
+            }
+
+        </style>
+
+    </head>
+
+    <body>
+
+        <header>
+            <h1> n Queens </h1>
+            <!-- <h3> Change the amount of queens to position in the board </h3> -->
+        </header>
+
+        <main id="board" style="--board-position-size: 30px;">
+
+            <section>
+
+                <article style="border-right: 1px solid black;">
+                    <label class="label"> Amount of queens </label>
+                    <button onclick="didClickMinusButton()" class="minus"> - </button>
+                    <label id="n" class="value"> 4 </label>
+                    <button onclick="didClickPlusButton()" class="plus"> + </button>
+                </article>
+
+                <article>
+                    <label class="label"> Board position size </label>
+                    <button onclick="didClickMinusBoardSizeButton()" class="minus"> - </button>
+                    <label id="board-position-size" class="value"> 30px </label>
+                    <button onclick="didClickPlusBoardSizeButton()" class="plus"> + </button>
+                </article>
+
+            </section>
+
+        </main>
+
+        <script>
+
+            var boardTag = document.getElementById('board')
+            var nTag = document.getElementById('n')
+            var boardPositionSizeTag = document.getElementById('board-position-size')
+            var n = 8
+            var queen = '♛'
+            var loading = false
+            var board = null
+            var selectedQueenNode = null
+            var boardPositionSize = 35
+            var didShowQueenPathFeature = false
+
+            var loadingTag = document.createElement('H4')
+            loadingTag.setAttribute('id', 'loading')
+            loadingTag.textContent = 'Loading...'
+
+            var currentBoardTag = null
+
+            function updateNValue() {
+                nTag.textContent = n
+            }
+
+            function didClickMinusButton() {
+                if (loading) {
+                    return
+                }
+                if (n == 4) {
+                    showUnsolvableAlert()
+                    return
+                }
+                n -= 1
+                updateViews()
+                run()
+            }
+
+            function didClickPlusButton() {
+                if (loading) {
+                    return
+                }
+                n += 1
+                updateViews()
+                run()
+            }
+
+            function didClickMinusBoardSizeButton() {
+                if (boardPositionSize > 30) {
+                    boardPositionSize -= 1
+                    updateBoardPositionSize()
+                }
+            }
+
+            function didClickPlusBoardSizeButton() {
+                boardPositionSize += 1
+                updateBoardPositionSize()
+            }
+
+            function updateBoardPositionSize() {
+                var boardTag = document.getElementById('board')
+                if (boardTag != null) {
+                    boardTag.style = '--board-position-size: ' + boardPositionSize + 'px;'
+                }
+                boardPositionSizeTag.textContent = boardPositionSize + 'px'
+            }
+
+            function updateViews() {
+                updateNValue()
+                updateBoard(n)
+            }
+
+            function showUnsolvableAlert() {
+                window.alert('The n queens problem only has solution for n >= 4.')
+            }
+
+            function setLoading(value) {
+                loading = value
+                if (loading) {
+                    boardTag.append(loadingTag)
+                } else {
+                    boardTag.removeChild(loadingTag)
+                }
+            }
+
+            function updateBoard(size) {
+                if (currentBoardTag != null) {
+                    boardTag.removeChild(currentBoardTag)
+                }
+                currentBoardTag = document.createElement('TABLE')
+                currentBoardTag.setAttribute('id', 'board-table')
+                var i = 0
+                var j = 0
+                var white = true
+                for (i = 0; i < size; i++) {
+                    var rowTag = document.createElement('TR')
+                    for (j = 0; j < size; j++) {
+                        var dataTag = document.createElement('TD')
+                        dataTag.setAttribute('id', 'r' + i + 'd' + j)
+                        dataTag.setAttribute('class', white ? 'white' : 'black')
+                        white = !white
+                        rowTag.append(dataTag)
+                    }
+                    if (size % 2 == 0) {
+                        white = !white
+                    }
+                    currentBoardTag.append(rowTag)
+                }
+                boardTag.appendChild(currentBoardTag)
+            }
+
+            function addQueenForPosition(x, y, nodeId) {
+                var boardPositionTag = document.getElementById('r' + y + 'd' + x)
+                if (boardPositionTag != null) {
+                    boardPositionTag.textContent = queen
+                    boardPositionTag.setAttribute('class', 'queen ' + boardPositionTag.getAttribute('class'))
+                    boardPositionTag.setAttribute('onclick', 'didClickQueenWithNodeId(' + nodeId + ')')
+                }
+            }
+
+            function didClickQueenWithNodeId(id) {
+                var selectedNodeIndex = board.nodes.findIndex(node => node.id == id)
+                if (selectedNodeIndex > -1) {
+                    if (selectedQueenNode != null) {
+                        hideQueenPathForSelectedNode()
+                    }
+                    if (selectedQueenNode == null || id != selectedQueenNode.id) {
+                        selectedQueenNode = board.nodes[selectedNodeIndex]
+                        showQueenPathForSelectedNode()
+                    } else {
+                        selectedQueenNode = null
+                    }
+                }
+            }
+
+            function showQueenPathForSelectedNode() {
+                if (selectedQueenNode != null) {
+                    selectedQueenNode.allPath().forEach(function(path) {
+                        let tag = document.getElementById('r' + path.value.y + 'd' + path.value.x)
+                        tag.setAttribute('class', tag.getAttribute('class') + '-red')
+                    })
+                    didShowQueenPathFeature = true
+                }
+            }
+
+            function hideQueenPathForSelectedNode() {
+                if (selectedQueenNode != null) {
+                    if (selectedQueenNode != null) {
+                    selectedQueenNode.allPath().forEach(function(path) {
+                        let tag = document.getElementById('r' + path.value.y + 'd' + path.value.x)
+                        tag.setAttribute('class', tag.getAttribute('class').replace('-red', ''))
+                    })
+                }
+                }
+            }
+
+            function run() {
+                setLoading(true)
+                
+                board = new Board(n)
+                var id = setTimeout(function(){
+                    board.csp.solve()
+                    board.queens.forEach(q => addQueenForPosition(q.value.x, q.value.y, q.id))
+                    setLoading(false)
+                    if (!didShowQueenPathFeature) {
+                        var innerid = setTimeout(function(){
+                            window.alert('Click on the queens on the board to see their possible moves.')
+                        }, 500)
+                    }
+                    clearTimeout(id)
+                }, 500)
+            }
+
+            updateBoardPositionSize()
+            updateViews()
+            run()
+        </script>
+
+    </body>
+
+</html>
